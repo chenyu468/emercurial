@@ -19,7 +19,7 @@
 
 -export([add/2,cat/2,clone/1,clone/2,commit/2,diff/2,init_hg/1,log/2,open/3,update/2,parents/2]).
 
--include("erlang_mercurial.hrl").
+-include("emercurial.hrl").
 
 -define(SERVER, ?MODULE). 
 -define(HGPATH, 'hg').
