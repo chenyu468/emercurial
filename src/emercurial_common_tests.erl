@@ -9,6 +9,8 @@ setup(Test_item)->
     Home = os:getenv("HOME"),
     Mercurial_path = filename:join([Home,Mercurial,Test_item]),
     Mercurial_test_path =  filename:join([Home,Mercurial]),
+    error_logger:info_report([common_tests_setup_2,Mercurial_test_path,
+                             Mercurial_path]),
     ok = application:set_env(romeo,mercurial_path,Mercurial_test_path),
     ok = make_dir(Mercurial_test_path),
     ok = make_dir(Mercurial_path),
