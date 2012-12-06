@@ -351,6 +351,11 @@ clear_error()->
 cmdbuilder(Name,Args_list,Kwarg_list)->
     emercurial_misc:cmdbuilder(Name,Args_list,Kwarg_list).
 
+convert(Branch=#branch{})->
+    #internal_branch{name = Branch#branch.name,
+                     f = Branch#branch.force,
+                     'C' = Branch#branch.clean};
+
 convert(Log=#log{})->
     #internal_log{template = ?TEMPLATE_CHANGESET,
                   r=Log#log.revrange,

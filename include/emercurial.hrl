@@ -78,6 +78,10 @@
                       'X' %exclude
                       }).
 
+-record(branch,{name = none,
+                clean = false,
+                force = false}).
+
 -record(commit,{message = none,
                 log_file = none,
                 add_remove = false,
@@ -174,3 +178,7 @@
                       'I', %% include
                       'X' %% exclude
                       }).
+
+-record(internal_branch,{name,
+                         f,
+                         'C'}).
