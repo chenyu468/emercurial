@@ -25,10 +25,6 @@
                encoding = none,
                configs = none}).
 
--record(internal_clone,{b, %% branch
-                        u, %% updaterev
-                        r %% revrange
-                        }).
 
 -record(raw_command,{args,
                     error_handler=none,
@@ -59,28 +55,13 @@
              include=none,
              exclude=none}).
 
--record(internal_log,{template,          
-          r, %%revrange
-                      f, %%follow
-                      follow_first,
-                      d, %%date
-                      c, %copies
-                      k, %keyword
-                      removed,%removed
-                      m, %onlymerges
-                      u, % user
-                      b, %branch
-                      'P', %prune
-                      h, %hidden
-                      l, %%limit
-                      'M',%nomerges
-                      'I',%include
-                      'X' %exclude
-                      }).
+
 
 -record(branch,{name = none,
                 clean = false,
                 force = false}).
+
+
 
 -record(commit,{message = none,
                 log_file = none,
@@ -118,9 +99,7 @@
                 file=none
                 }).
 
--record(internal_parents,{template,
-                r
-                }).
+
 
 -record(cat,{files,
              rev=none,
@@ -149,6 +128,78 @@
               exclude = none
               }).
 
+
+-record(add,{files = [],
+             dryrun = false,
+             subrepos = false,
+             include = none,
+             exclude = none
+             }).
+
+-record(push,{dest=none,rev=none,force=false,bookmark=none,branch=none,
+              newbranch=false,ssh=none,remotecmd=none,insecure=false}).
+
+-record(tag,{names,rev=none,message=none,force=false,local=false,
+             remove=false,date=none,user=none}).
+
+-record(internal_add,{n, %% dryrun
+                      'S', %% subrepos
+                      'I', %% include
+                      'X' %% exclude
+                      }).
+
+-record(internal_branch,{name,
+                         f,
+                         'C'}).
+
+-record(internal_tag,{r,
+                      m,
+                      f,
+                      l,
+                      remove,
+                      d,
+                      u,
+                      name}).
+
+-record(internal_clone,{b, %% branch
+                        u, %% updaterev
+                        r %% revrange
+                        }).
+
+-record(internal_log,{template,          
+          r, %%revrange
+                      f, %%follow
+                      follow_first,
+                      d, %%date
+                      c, %copies
+                      k, %keyword
+                      removed,%removed
+                      m, %onlymerges
+                      u, % user
+                      b, %branch
+                      'P', %prune
+                      h, %hidden
+                      l, %%limit
+                      'M',%nomerges
+                      'I',%include
+                      'X' %exclude
+                      }).
+
+-record(internal_parents,{template,
+                r
+                }).
+
+-record(internal_push,{dest,
+                       r,
+                       f,
+                       'B',
+                       b,
+                       new_branch,
+                       e,
+                       remotecmd,
+                       insecure
+                       }).
+
 -record(internal_diff,{r, %% revs
                        c, %% change
                        a, %% text
@@ -165,20 +216,3 @@
                        'I', %% include
                        'X' %% exclude
                        }).
-
--record(add,{files = [],
-             dryrun = false,
-             subrepos = false,
-             include = none,
-             exclude = none
-             }).
-
--record(internal_add,{n, %% dryrun
-                      'S', %% subrepos
-                      'I', %% include
-                      'X' %% exclude
-                      }).
-
--record(internal_branch,{name,
-                         f,
-                         'C'}).
