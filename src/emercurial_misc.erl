@@ -11,9 +11,12 @@
 -export([cmdbuilder/3,get_excluded_list/2]).
 -export([list_to_command/1]).
 %%test
--export([cmd_process/1,process_key_value/2,list_contain/2,binary_to_atom_list/2,binary_to_tuple_list/3]).
--export([generate_mercurial_error/4,generate_revision/1,receive_data/1,receive_data/2,atom_to_atom_list/2]).
--export([binary_to_tuple/2,run_command_cmdbuilder/3,get_run_command_binary/1,replace/3]).
+-export([cmd_process/1,process_key_value/2,list_contain/2,binary_to_atom_list/2,
+         binary_to_tuple_list/3]).
+-export([generate_mercurial_error/4,generate_value_error/1,generate_revision/1,
+         receive_data/1,receive_data/2,atom_to_atom_list/2]).
+-export([binary_to_tuple/2,run_command_cmdbuilder/3,get_run_command_binary/1,
+         replace/3]).
 -export([skiplines/2]).
 %%         binary_to_tuple_list/3]).
 %%-compile([export_all]).
@@ -27,7 +30,22 @@
 ?R2P(internal_parents);
 ?R2P(internal_cat);
 ?R2P(internal_diff);
-?R2P(internal_add).
+?R2P(internal_add);
+?R2P(internal_tag);
+?R2P(internal_branch);
+?R2P(internal_push);
+?R2P(internal_tags);
+?R2P(log);
+?R2P(commit);
+?R2P(update);
+?R2P(parents);
+?R2P(cat);
+?R2P(diff);
+?R2P(add);
+?R2P(tag);
+?R2P(branch);
+?R2P(push).
+
 
 %%%===============================================
 %%% API
@@ -85,10 +103,14 @@ cmd_process(Command)->
 
 get_excluded_list(Record,Excluded_list)->
     List = record_to_proplist(Record),
+    %%List = ?R2P(Record),
     lists:foldl(fun(X,L)->
                       proplists:delete(X,L)
               end, 
               List,Excluded_list).
+
+generate_value_error(Value)->
+    #mercurial_value_error{value=Value}.
 
 generate_mercurial_error(Args,Ret,Out,Error)->
     #mercurial_command_error{args=Args,ret=Ret,out=Out,error=Error}.
@@ -100,7 +122,7 @@ generate_revision(List)->
     lists:zip(?REVISION,List_b).
 
 get_run_command_binary(Args)->
-    %%error_logger:info_report([get_run_command_binary,Args]),
+    error_logger:info_report([get_run_command_binary,Args]),
     List = lists:map(fun atom_to_list/1,Args),
     String = string:join(List,[$\0]),
     Size = length(String),

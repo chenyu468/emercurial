@@ -11,13 +11,16 @@
 -behaviour(gen_server).
 
 %% API
+-compile([export_all]).
+
 -export([start_link/4]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--export([add/2,cat/2,clone/1,clone/2,commit/2,diff/2,init_hg/1,log/2,open/3,update/2,parents/2]).
+-export([add/2,branch/2,cat/2,clone/1,clone/2,commit/2,diff/2,init_hg/1,log/2,
+         open/3,update/2,parents/2,push/2,tag/2,tags/1]).
 
 -include("emercurial.hrl").
 
@@ -71,6 +74,9 @@ init_hg(Clone)->
 add(Pid,Add)->
     gen_server:call(Pid,{add,Add}).
 
+branch(Pid,Branch)->
+    gen_server:call(Pid,{branch,Branch}).
+
 cat(Pid,Cat)->
     gen_server:call(Pid,{cat,Cat}).
 
@@ -89,6 +95,15 @@ log(Pid,Log)->
 
 parents(Pid,Parents)->
     gen_server:call(Pid,{parents,Parents}).
+
+push(Pid,Push)->
+    gen_server:call(Pid,{push,Push}).
+
+tag(Pid,Tag)->
+    gen_server:call(Pid,{tag,Tag}).
+
+tags(Pid)->
+    gen_server:call(Pid,{tags}).
 
 update(Pid,Update)->
     gen_server:call(Pid,{update,Update}).
@@ -162,6 +177,27 @@ handle_call({add,Add},_From,State)->
     Result = emercurial_reterrorhandler:nonzero(),
     {reply,Result,State};         
 
+handle_call({branch,#branch{name=none,clean=true}},_From,_State)->
+    throw(emercurial_misc:generate_value_error(
+            "cannot use both name and clean"));
+
+handle_call({branch,Branch},_From,State)->
+    Internal_branch = convert(Branch),
+    Kwargs = get_excluded_list(Internal_branch,[name]),
+    Name = Branch#branch.name,
+    Args = emercurial_misc:run_command_cmdbuilder('branch',[Name],Kwargs),
+    New_args = Args,
+    Raw_command = #raw_command{args = New_args},
+    Out = raw_command(State,Raw_command),
+    %% case Out of
+    %%     [] ->
+    %%         ok;
+    %%     _ ->
+    %%         exit(gen_error(New_args,Out,get_out(),get_error()))
+    %% end,
+    {reply,Out,State};
+
+
 handle_call({cat,Cat},_From,State)->
     Internal_cat = convert(Cat),
     Kwargs = get_excluded_list(Internal_cat,[files]),
@@ -184,7 +220,7 @@ handle_call({clone,Clone},_From,State)->
     Source = Clone#clone.source,
     Dest = Clone#clone.dest,
     Args = emercurial_misc:run_command_cmdbuilder('clone',
-                                                        [Source,Dest],Kwargs),
+                                                  [Source,Dest],Kwargs),
     Raw_command = #raw_command{args = Args},
     Out = raw_command(State,Raw_command),
     error_logger:info_report([handle_call_clone_2,Out]),
@@ -196,12 +232,14 @@ handle_call({commit,Commit},_From,State)->
     Kwargs = get_excluded_list(Internal_commit,[]),
     Args = emercurial_misc:run_command_cmdbuilder('commit',[],Kwargs),
     Out = raw_command(State,#raw_command{args=Args}),
-    List_b = binary:split(Out,<<" ">>,[global]),
-    Last = lists:last(List_b),
-    [Rev,Node] = binary:split(Last,<<":">>),
-    Rev_a = list_to_atom(binary_to_list(Rev)),
-    Node_a = list_to_atom(lists:sublist(binary_to_list(Node),1,size(Node)-1)),
-    {reply,{Rev_a,Node_a},State};
+    error_logger:info_report([client_handle_call_commit_1,Out]),
+    %% List_b = binary:split(Out,<<" ">>,[global]),
+    %% Last = lists:last(List_b),
+    %% [Rev,Node] = binary:split(Last,<<":">>),
+    %% Rev_a = list_to_atom(binary_to_list(Rev)),
+    %% Node_a = list_to_atom(lists:sublist(binary_to_list(Node),1,size(Node)-1)),
+    %% process_out(Out),
+    {reply,process_out(Out),State};
 
 handle_call({diff,Diff},_From,State)->
     Internal_diff = convert(Diff),
@@ -240,6 +278,45 @@ handle_call({parents,Parents},_From,State)->
     Revision = emercurial_misc:generate_revision(List_b_a),
     {reply,Revision,State};
 
+handle_call({push,Push},_From,State)->
+    Internal_push = convert(Push),
+    Kwargs = get_excluded_list(Internal_push,[dest]),
+    Dest = Push#push.dest,
+    Args = emercurial_misc:run_command_cmdbuilder('push',[Dest],Kwargs),
+    Raw_command = #raw_command{args = Args},
+    Out = raw_command(State,Raw_command),
+    List_b = binary:split(Out,<<$\0>>,[global]),
+    List_b_a = lists:sublist(List_b,1,length(List_b)-1),
+    Revision = emercurial_misc:generate_revision(List_b_a),
+    {reply,Revision,State};    
+
+handle_call({tag,Tag=#tag{names=Names}},_From,State)->
+    case is_list(Names) of
+        true ->
+            New_names = Names;
+        false ->
+            New_names = [Names]
+    end,
+    Internal_tag = convert(Tag),
+    Kwargs = get_excluded_list(Internal_tag,[names]),    
+    Args = emercurial_misc:run_command_cmdbuilder('tag',[],Kwargs),
+    New_args = Args ++ New_names,
+    Out = raw_command(State,#raw_command{args=New_args}),
+    {reply,process_out(Out),State};
+
+handle_call({tags},_From,State)->
+    %% Internal_tag = convert(Tag),
+    %% Kwargs = get_excluded_list(Internal_tag,[names]),    
+    Internal_tags = #internal_tags{v = true},
+    Kwargs = get_excluded_list(Internal_tags,[]), 
+    Args = emercurial_misc:run_command_cmdbuilder('tags',[],Kwargs),
+    Out = raw_command(State,#raw_command{args=Args}),
+    %%开始解析tags
+    List_b = binary:split(Out,<<$\0>>,[global]),
+    
+    {reply,Out,State};
+
+
 handle_call({update,Update},_From,State)->
     Internal_update = convert(Update),
     if
@@ -253,13 +330,13 @@ handle_call({update,Update},_From,State)->
     Kwargs = get_excluded_list(Internal_update,[]),
     Args = emercurial_misc:run_command_cmdbuilder('update',[],Kwargs),
     Eh = fun (Return, Out, Error)->
-                  case Return of
-                      1 ->
-                          Out;
-                      _ ->
-                          exit(gen_error(Args,Return,Out,Error))
-                  end
-          end,
+                 case Return of
+                     1 ->
+                         Out;
+                     _ ->
+                         exit(gen_error(Args,Return,Out,Error))
+                 end
+         end,
     Out = raw_command(State,#raw_command{args=Args,error_handler=Eh}),
     List_a = emercurial_misc:skiplines(Out,<<"merging ">>),
     List_b = lists:map(fun(X)->
@@ -351,10 +428,10 @@ clear_error()->
 cmdbuilder(Name,Args_list,Kwarg_list)->
     emercurial_misc:cmdbuilder(Name,Args_list,Kwarg_list).
 
-convert(Branch=#branch{})->
-    #internal_branch{name = Branch#branch.name,
-                     f = Branch#branch.force,
-                     'C' = Branch#branch.clean};
+%% convert(Branch=#branch{})->
+%%     #internal_branch{name = Branch#branch.name,
+%%                      f = Branch#branch.force,
+%%                      'C' = Branch#branch.clean};
 
 convert(Log=#log{})->
     #internal_log{template = ?TEMPLATE_CHANGESET,
@@ -436,7 +513,39 @@ convert(Add=#add{}) ->
          'S' = Add#add.subrepos,
          'I' = Add#add.include,
          'X' = Add#add.exclude
-         }.
+         };
+
+convert(Tag=#tag{})->
+    #internal_tag{
+       names = Tag#tag.names,
+       r = Tag#tag.rev,
+       m = Tag#tag.message,
+       f = Tag#tag.force,
+       l = Tag#tag.local,
+       remove = Tag#tag.remove,
+       d = Tag#tag.date,
+       u = Tag#tag.user
+      };
+
+convert(Branch=#branch{}) ->
+    #internal_branch{
+       name = Branch#branch.name,
+       f = Branch#branch.force,
+       'C' = Branch#branch.clean
+      };
+
+convert(Push=#push{}) ->
+    #internal_push{
+       dest = Push#push.dest,
+       r = Push#push.rev,
+       f = Push#push.force,
+       'B' = Push#push.bookmark,
+       b = Push#push.branch,
+       new_branch = Push#push.newbranch,
+       e = Push#push.ssh,
+       remotecmd = Push#push.remotecmd,
+       insecure = Push#push.insecure
+       }.
 
 error_write(Data) ->
     put(error_data,Data).
@@ -469,6 +578,15 @@ is_i_or_l(_) ->
 
 gen_error(Args,Return,Out,Error)->
     emercurial_misc:generate_mercurial_error(Args,Return,Out,Error).
+
+
+process_out(Out)->
+    List_b = binary:split(Out,<<" ">>,[global]),
+    Last = lists:last(List_b),
+    [Rev,Node] = binary:split(Last,<<":">>),
+    Rev_a = list_to_atom(binary_to_list(Rev)),
+    Node_a = list_to_atom(lists:sublist(binary_to_list(Node),1,size(Node)-1)),
+    {Rev_a,Node_a}.
 
 out_write(Data)->
     case get(out_data) of
@@ -506,7 +624,10 @@ raw_command(State,#raw_command{args=Args,prompt=Prompt,input=Input,error_handler
             Return->
                 case Error_handler of
                     none ->
-                        exit(emercurial_misc:generate_mercurial_error(Args,Return,get_out(),get_error()));
+                        exit(emercurial_misc:generate_mercurial_error(Args,
+                                                                      Return,
+                                                                      get_out(),
+                                                                      get_error()));
                     _->
                         Error_handler(Return,get_out(),get_error())
                 end
@@ -515,9 +636,10 @@ raw_command(State,#raw_command{args=Args,prompt=Prompt,input=Input,error_handler
         Error:Reason->
             case Error_handler of
                 none ->
-                    
+                    error_logger:info_report([client_raw_command_1,Error,Reason]),
                     emercurial_misc:generate_mercurial_error(
-                      Args,"",get_out(),atom_to_list(Error) ++ atom_to_list(Reason)),
+                      Args,"",get_out(),atom_to_list(Error) 
+                      ++ love_misc:to_binary(term_to_binary(Reason))),
                     error_logger:info_report([erlang:get_stacktrace()]);
                 _->
                     Error_handler("",get_out(),Reason)
@@ -626,3 +748,26 @@ write_data(Port,Data)->
 write_block(Port,Data)->
     Size = size(Data),
     write_data(Port,<<Size:32/unsigned,Data>>).
+
+process_tags(List)->
+    process_tags(List,[]).
+
+process_tags([],Result)->
+    lists:reverse(Result);
+
+process_tags([Line|Rest],Result) ->
+    B = binary_to_list(Line),
+    A = process_tags_line(B),
+    process_tags(Rest,[A|Result]).
+
+process_tags_line(New_list ++"local")->
+    %% case List of
+    %%     Data ++ " local" ->
+    %%         New_list = Data;
+    %%     _ ->
+    %%         New_list = List
+    %% end,
+    [Name,Part2] = string:tokens(Data," "),
+    [Rev,Node] = string:tokens(Part2,":"),
+    {trim(Name),love_misc:to_integer(Rev),
+     node,New_list}.

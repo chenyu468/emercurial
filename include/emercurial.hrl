@@ -37,6 +37,8 @@
                          out,
                          error}).
 
+-record(mercurial_value_error,{value}).
+
 -record(log,{revrange=none,
              files=[],
              follow=false,
@@ -142,6 +144,15 @@
 -record(tag,{names,rev=none,message=none,force=false,local=false,
              remove=false,date=none,user=none}).
 
+-record(internal_tag,{r,
+                      m,
+                      f,
+                      l,
+                      remove,
+                      d,
+                      u,
+                      names}).
+
 -record(internal_add,{n, %% dryrun
                       'S', %% subrepos
                       'I', %% include
@@ -152,14 +163,6 @@
                          f,
                          'C'}).
 
--record(internal_tag,{r,
-                      m,
-                      f,
-                      l,
-                      remove,
-                      d,
-                      u,
-                      name}).
 
 -record(internal_clone,{b, %% branch
                         u, %% updaterev
@@ -215,4 +218,7 @@
                        'S', %% subrepos
                        'I', %% include
                        'X' %% exclude
+                       }).
+
+-record(internal_tags,{v
                        }).
