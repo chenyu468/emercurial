@@ -20,7 +20,7 @@ setup(Test_item)->
     Result.
     
 teardown()->
-    {ok, Path} = application:get_env(romeo,mercurial_path),
+    {ok, Path} = application:get_env(romeo,mercurial_test),
     %%del_dir(Path).
     nuke_dir(Path).
 

@@ -239,6 +239,7 @@ handle_call({commit,Commit},_From,State)->
     %% Rev_a = list_to_atom(binary_to_list(Rev)),
     %% Node_a = list_to_atom(lists:sublist(binary_to_list(Node),1,size(Node)-1)),
     %% process_out(Out),
+    error_logger:info_report([client_call_commit_1,Out]),
     {reply,process_out(Out),State};
 
 handle_call({diff,Diff},_From,State)->
@@ -312,8 +313,7 @@ handle_call({tags},_From,State)->
     Args = emercurial_misc:run_command_cmdbuilder('tags',[],Kwargs),
     Out = raw_command(State,#raw_command{args=Args}),
     %%开始解析tags
-    List_b = binary:split(Out,<<$\0>>,[global]),
-    
+    process_tags(Out),
     {reply,Out,State};
 
 
@@ -750,9 +750,13 @@ write_block(Port,Data)->
     write_data(Port,<<Size:32/unsigned,Data>>).
 
 process_tags(List)->
-    process_tags(List,[]).
+    List_b = binary:split(List,<<$\n>>,[global]),
+    process_tags(List_b,[]).
 
 process_tags([],Result)->
+    lists:reverse(Result);
+
+process_tags([<<>>],Result)->
     lists:reverse(Result);
 
 process_tags([Line|Rest],Result) ->
@@ -760,14 +764,20 @@ process_tags([Line|Rest],Result) ->
     A = process_tags_line(B),
     process_tags(Rest,[A|Result]).
 
-process_tags_line(New_list ++"local")->
-    %% case List of
-    %%     Data ++ " local" ->
-    %%         New_list = Data;
-    %%     _ ->
-    %%         New_list = List
-    %% end,
-    [Name,Part2] = string:tokens(Data," "),
-    [Rev,Node] = string:tokens(Part2,":"),
-    {trim(Name),love_misc:to_integer(Rev),
-     node,New_list}.
+process_tags_line(List) -> 
+    case lists:suffix(" local",List) of
+        true ->
+            New_list = lists:sublist(List,1,length(List)-7);
+        _ ->
+            New_list = List
+    end,
+    {Name,Part2} = rsplit(New_list,$\s),
+    {Rev,Node} = 
+        rsplit(Part2,$:),
+    Rev_a =  string:substr(Rev,1,length(Rev)-1),
+    {love_misc:trim(Name),love_misc:to_integer(Rev_a),Node,New_list}.
+
+rsplit(A,Char)->
+    Index = string:rchr(A,Char),
+    lists:split(Index,A).
+ 
