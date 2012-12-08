@@ -231,15 +231,16 @@ handle_call({commit,Commit},_From,State)->
     Internal_commit = convert(Commit),
     Kwargs = get_excluded_list(Internal_commit,[]),
     Args = emercurial_misc:run_command_cmdbuilder('commit',[],Kwargs),
+    error_logger:info_report([client_call_commit_1,Args]),
     Out = raw_command(State,#raw_command{args=Args}),
-    error_logger:info_report([client_handle_call_commit_1,Out]),
+    error_logger:info_report([client_handle_call_commit_2,Out]),
     %% List_b = binary:split(Out,<<" ">>,[global]),
     %% Last = lists:last(List_b),
     %% [Rev,Node] = binary:split(Last,<<":">>),
     %% Rev_a = list_to_atom(binary_to_list(Rev)),
     %% Node_a = list_to_atom(lists:sublist(binary_to_list(Node),1,size(Node)-1)),
     %% process_out(Out),
-    error_logger:info_report([client_call_commit_1,Out]),
+    error_logger:info_report([client_call_commit_2,Out]),
     {reply,process_out(Out),State};
 
 handle_call({diff,Diff},_From,State)->
@@ -302,8 +303,8 @@ handle_call({tag,Tag=#tag{names=Names}},_From,State)->
     Kwargs = get_excluded_list(Internal_tag,[names]),    
     Args = emercurial_misc:run_command_cmdbuilder('tag',[],Kwargs),
     New_args = Args ++ New_names,
-    Out = raw_command(State,#raw_command{args=New_args}),
-    {reply,process_out(Out),State};
+    <<>> = raw_command(State,#raw_command{args=New_args}),
+    {reply,ok,State};
 
 handle_call({tags},_From,State)->
     %% Internal_tag = convert(Tag),
@@ -313,8 +314,8 @@ handle_call({tags},_From,State)->
     Args = emercurial_misc:run_command_cmdbuilder('tags',[],Kwargs),
     Out = raw_command(State,#raw_command{args=Args}),
     %%开始解析tags
-    process_tags(Out),
-    {reply,Out,State};
+    Result = process_tags(Out),
+    {reply,Result,State};
 
 
 handle_call({update,Update},_From,State)->
@@ -420,7 +421,9 @@ add_atom(Arg,Key,Value) ->
     Arg ++ [Key] ++ [Value].
 
 clear_out()->
-    out_write(<<>>).
+    %% erase(out_data).
+    put(out_data,<<>>).
+    %% out_write(<<>>).
 
 clear_error()->
     error_write(<<>>).
@@ -581,6 +584,7 @@ gen_error(Args,Return,Out,Error)->
 
 
 process_out(Out)->
+    error_logger:info_report([client_process_out_1,Out]),
     List_b = binary:split(Out,<<" ">>,[global]),
     Last = lists:last(List_b),
     [Rev,Node] = binary:split(Last,<<":">>),
@@ -728,12 +732,13 @@ run_command_internal(Channel,Data,State=#state{port=Port},In_channels,Out_channe
 
 run_command_internal(Channel,Data,State,In_channels,Out_channels)
   when Channel=='o' orelse Channel=='e'->
+    %% error_logger:info_report([run_command_internal_o_e,Data]),
     Fun = proplists:get_value(Channel,Out_channels),
     Fun(Data),
     run_command_internal(State,In_channels,Out_channels);
 
 run_command_internal('r',<<Data:32/unsigned>>,_State,_,_) ->
-    error_logger:info_report([run_command_internal_r,Data]),
+    %% error_logger:info_report([run_command_internal_r,Data]),
     Data;
 
 run_command_internal(Channel,_,_,_,_) when Channel >= 'A' andalso Channel =< 'A'  ->
@@ -751,7 +756,9 @@ write_block(Port,Data)->
 
 process_tags(List)->
     List_b = binary:split(List,<<$\n>>,[global]),
-    process_tags(List_b,[]).
+    Result = process_tags(List_b,[]),
+    %% error_logger:info_report([client_process_tags,Result]),
+    Result.
 
 process_tags([],Result)->
     lists:reverse(Result);
@@ -765,6 +772,7 @@ process_tags([Line|Rest],Result) ->
     process_tags(Rest,[A|Result]).
 
 process_tags_line(List) -> 
+    %% error_logger:info_report([client_tags_line_1,List]),
     case lists:suffix(" local",List) of
         true ->
             New_list = lists:sublist(List,1,length(List)-7);

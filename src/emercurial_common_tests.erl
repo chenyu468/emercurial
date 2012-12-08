@@ -1,17 +1,16 @@
 -module(emercurial_common_tests).
 
--export([setup/1,teardown/0,append/2]).
+-export([setup/1,teardown/1,append/2]).
 
-
-setup(Test_item)->
-    %%application: os:genenv("HOME"),
+get_mercurial_path(Test_item)->
     {ok,Mercurial} = application:get_env(romeo,mercurial_test),
     Home = os:getenv("HOME"),
     Mercurial_path = filename:join([Home,Mercurial,Test_item]),
     Mercurial_test_path =  filename:join([Home,Mercurial]),
-    error_logger:info_report([common_tests_setup_2,Mercurial_test_path,
-                             Mercurial_path]),
-    ok = application:set_env(romeo,mercurial_path,Mercurial_test_path),
+    {Mercurial_path,Mercurial_test_path}.
+    
+setup(Test_item)->
+    {Mercurial_path,Mercurial_test_path} = get_mercurial_path(Test_item),
     ok = make_dir(Mercurial_test_path),
     ok = make_dir(Mercurial_path),
     file:set_cwd(Mercurial_path),
@@ -19,10 +18,9 @@ setup(Test_item)->
     error_logger:info_report([setup,Result]),
     Result.
     
-teardown()->
-    {ok, Path} = application:get_env(romeo,mercurial_test),
-    %%del_dir(Path).
-    nuke_dir(Path).
+teardown(Test_item)->
+    {_Mercurial_path,Mercurial_test_path} = get_mercurial_path(Test_item),    
+    nuke_dir(Mercurial_test_path).
 
 append(Name,Content)->
     %%ok = file:set_cwd(Path),
