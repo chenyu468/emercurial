@@ -189,14 +189,18 @@ handle_call({branch,Branch},_From,State)->
     New_args = Args,
     Raw_command = #raw_command{args = New_args},
     Out = raw_command(State,Raw_command),
-    %% case Out of
-    %%     [] ->
-    %%         ok;
-    %%     _ ->
-    %%         exit(gen_error(New_args,Out,get_out(),get_error()))
-    %% end,
-    {reply,Out,State};
-
+    Result = case Name of
+                 none ->
+                     case Branch#branch.clean of
+                         true ->
+                             Out;
+                         false ->
+                             list_to_atom(love_misc:trim(love_misc:to_list(Out)))                    
+                     end;
+                 Value ->
+                     Value
+             end,
+    {reply,Result,State};
 
 handle_call({cat,Cat},_From,State)->
     Internal_cat = convert(Cat),
@@ -259,13 +263,17 @@ handle_call({log,Log},_From,State)->
     Args = emercurial_misc:run_command_cmdbuilder('log',[],Kwargs),
     Files = Log#log.files,
     New_args = Args ++ Files,
-    error_logger:info_report([handle_call_log_2,New_args]),
+    error_logger:info_report([handle_call_log_1,New_args]),
     Raw_command = #raw_command{args = New_args},
     Out = raw_command(State,Raw_command),
-    List_b = binary:split(Out,<<$\0>>,[global]),
-    List_b_a = lists:sublist(List_b,1,length(List_b)-1),
+    error_logger:info_report([client_call_log_2,Out]),
+    List_b = binary:split(Out,<<$\0>>,[global,trim]),
+    error_logger:info_report([client_call_log_3,List_b]),
+    List_b_a = lists:sublist(List_b,1,length(List_b)),
+    %%List_b_a = lists:sublist(List_b,1,length(List_b)-1),
     %% List_c = binary_to_list(lists:last(List_b)),
-    Revision = emercurial_misc:generate_revision(List_b_a),
+    %%Revision = emercurial_misc:generate_revision(List_b_a),
+    Revision = emercurial_misc:generate_log_revision(List_b_a),
     {reply,Revision,State};
 
 handle_call({parents,Parents},_From,State)->

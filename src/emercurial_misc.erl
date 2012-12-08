@@ -16,7 +16,7 @@
 -export([generate_mercurial_error/4,generate_value_error/1,generate_revision/1,
          receive_data/1,receive_data/2,atom_to_atom_list/2]).
 -export([binary_to_tuple/2,run_command_cmdbuilder/3,get_run_command_binary/1,
-         replace/3]).
+         replace/3,generate_log_revision/1]).
 -export([skiplines/2]).
 %%         binary_to_tuple_list/3]).
 %%-compile([export_all]).
@@ -115,7 +115,27 @@ generate_value_error(Value)->
 generate_mercurial_error(Args,Ret,Out,Error)->
     #mercurial_command_error{args=Args,ret=Ret,out=Out,error=Error}.
 
+generate_log_revision(List)->
+    generate_log_revision(List,[]).
+
+generate_log_revision([],Result)->
+    lists:reverse(Result);
+
+generate_log_revision(List,Result)->
+    error_logger:info_report([misc_log_revision_1,List]),
+    Revision = lists:sublist(List,7),
+    A = generate_revision(Revision),
+    case length(List) >= 7 of
+        true ->
+            Rest = lists:sublist(List,8,length(List)),
+            generate_log_revision(Rest,[A|Result]);           
+        false ->
+            generate_log_revision([],[A|Result])
+    end.
+  
+
 generate_revision(List)->
+    error_logger:info_report([misc_generate_revision_1,List]),
     List_b = lists:map(fun (X)->
                            list_to_atom(binary_to_list(X))
                                end, List),
