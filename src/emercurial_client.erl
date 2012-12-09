@@ -177,7 +177,7 @@ handle_call({add,Add},_From,State)->
     Result = emercurial_reterrorhandler:nonzero(),
     {reply,Result,State};         
 
-handle_call({branch,#branch{name=none,clean=true}},_From,_State)->
+handle_call({branch,#branch{name=Name,clean=true}},_From,_State) when Name =/= none ->
     throw(emercurial_misc:generate_value_error(
             "cannot use both name and clean"));
 
@@ -263,16 +263,12 @@ handle_call({log,Log},_From,State)->
     Args = emercurial_misc:run_command_cmdbuilder('log',[],Kwargs),
     Files = Log#log.files,
     New_args = Args ++ Files,
-    error_logger:info_report([handle_call_log_1,New_args]),
     Raw_command = #raw_command{args = New_args},
     Out = raw_command(State,Raw_command),
-    error_logger:info_report([client_call_log_2,Out]),
     List_b = binary:split(Out,<<$\0>>,[global,trim]),
     error_logger:info_report([client_call_log_3,List_b]),
     List_b_a = lists:sublist(List_b,1,length(List_b)),
-    %%List_b_a = lists:sublist(List_b,1,length(List_b)-1),
-    %% List_c = binary_to_list(lists:last(List_b)),
-    %%Revision = emercurial_misc:generate_revision(List_b_a),
+    error_logger:info_report([client_call_log_4,List_b_a]),
     Revision = emercurial_misc:generate_log_revision(List_b_a),
     {reply,Revision,State};
 

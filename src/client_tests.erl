@@ -1,6 +1,6 @@
 -module(client_tests).
 
--export([tag_a_test_a/0,branch_empty_test_a/0,branch_basic_test_a/0]).
+-export([tag_a_test_a/0,branch_empty_test_a/0,branch_basic_test_a/0,branch_reset_with_name_test_a/0]).
 -import(emercurial_common_tests,[setup/1,teardown/1,append/2]).
 
 -include("emercurial.hrl").
@@ -34,19 +34,28 @@ branch_basic_test_a()->
     teardown(branch),
     setup(branch),
     {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
-    Result = emercurial_client:branch(Pid,#branch{name='foo',clean=true}),
+    Result = emercurial_client:branch(Pid,#branch{name='foo'}),
     ?assertMatch(Result,'foo'),
     append("a","a"),
-    {Rev,Node} =emercurial_client:commit(Pid,#commit{message='first',add_remove=true}),
-    Result_1 = emercurial_client:branch(Pid,#branch{name='foo_1',clean=true}),
-    ?assertMatch(Result_1,'foo_1'),
-    append("b","b"),
-    {Rev_1,Node_1} =emercurial_client:commit(Pid,#commit{message='second',add_remove=true}),
-    %%Log = #log{revrange=Node},
+    {_Rev,_Node} =emercurial_client:commit(Pid,#commit{message='first',add_remove=true}),
     Log = #log{},
     Result_a = emercurial_client:log(Pid,Log),
+    error_logger:info_report([client_basic_test_a_1,Result_a]),
+    First = lists:nth(1,Result_a),
+    B_a = love_misc:get_value(branch,First),
+    ?assertMatch(B_a, 'foo').
+
+branch_reset_with_name_test_a()->
+    teardown(branch),
+    setup(branch),
+    {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
+    Result = emercurial_client:branch(Pid,#branch{name='foo',clean=true}).
+    %% ?assertMatch(Result,'foo'),
+    %% append("a","a"),
+    %% {Rev,Node} =emercurial_client:commit(Pid,#commit{message='first',add_remove=true}),
+    %% Log = #log{},
+    %% Result_a = emercurial_client:log(Pid,Log),
+    %% error_logger:info_report([client_basic_test_a_1,Result_a]),
     %% First = lists:nth(1,Result_a),
-    %% ?assertMatch(
-    %% %% %% Result = emercurial_client:branch(Pid,#branch{}),
-    error_logger:info_report([client_branch_basic_test_2,Result_a,Rev]).
-    %% teardown(branch).
+    %% B_a = love_misc:get_value(branch,First),
+    %% ?assertMatch(B_a, 'foo').    
