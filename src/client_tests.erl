@@ -49,7 +49,7 @@ branch_reset_with_name_test_a()->
     teardown(branch),
     setup(branch),
     {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
-    Result = emercurial_client:branch(Pid,#branch{name='foo',clean=true}).
+    ?assertThrow( emercurial_client:branch(Pid,#branch{name='foo',clean=true}).
     %% ?assertMatch(Result,'foo'),
     %% append("a","a"),
     %% {Rev,Node} =emercurial_client:commit(Pid,#commit{message='first',add_remove=true}),
