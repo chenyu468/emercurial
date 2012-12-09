@@ -74,6 +74,10 @@ init_hg(Clone)->
 add(Pid,Add)->
     gen_server:call(Pid,{add,Add}).
 
+branch(_Pid,#branch{name=Name,clean=true}) when Name =/= none ->
+    throw(emercurial_misc:generate_value_error(
+            "cannot use both name and clean"));
+
 branch(Pid,Branch)->
     gen_server:call(Pid,{branch,Branch}).
 
@@ -177,10 +181,6 @@ handle_call({add,Add},_From,State)->
     Result = emercurial_reterrorhandler:nonzero(),
     {reply,Result,State};         
 
-handle_call({branch,#branch{name=Name,clean=true}},_From,_State) when Name =/= none ->
-    throw(emercurial_misc:generate_value_error(
-            "cannot use both name and clean"));
-
 handle_call({branch,Branch},_From,State)->
     Internal_branch = convert(Branch),
     Kwargs = get_excluded_list(Internal_branch,[name]),
@@ -193,7 +193,10 @@ handle_call({branch,Branch},_From,State)->
                  none ->
                      case Branch#branch.clean of
                          true ->
-                             Out;
+                             %% Out;
+                             %% 从第34个字符开始输出内容
+                             D = love_misc:trim(love_misc:to_list(Out)),
+                             list_to_atom(string:substr(D,35));
                          false ->
                              list_to_atom(love_misc:trim(love_misc:to_list(Out)))                    
                      end;
@@ -589,8 +592,10 @@ gen_error(Args,Return,Out,Error)->
 
 process_out(Out)->
     error_logger:info_report([client_process_out_1,Out]),
-    List_b = binary:split(Out,<<" ">>,[global]),
+    List_b = binary:split(Out,<<" ">>,[global,trim]),
+    error_logger:info_report([client_process_out_2,List_b]),
     Last = lists:last(List_b),
+    error_logger:info_report([client_process_out_3,Last]),
     [Rev,Node] = binary:split(Last,<<":">>),
     Rev_a = list_to_atom(binary_to_list(Rev)),
     Node_a = list_to_atom(lists:sublist(binary_to_list(Node),1,size(Node)-1)),

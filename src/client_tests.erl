@@ -1,6 +1,8 @@
 -module(client_tests).
 
--export([tag_a_test_a/0,branch_empty_test_a/0,branch_basic_test_a/0,branch_reset_with_name_test_a/0]).
+-export([tag_a_test_a/0,branch_empty_test_a/0,branch_basic_test_a/0,
+         branch_reset_with_name_test_a/0,branch_reset_test_a/0,
+        branch_exists_test_a/0,branch_force_test_a/0]).
 -import(emercurial_common_tests,[setup/1,teardown/1,append/2]).
 
 -include("emercurial.hrl").
@@ -49,13 +51,53 @@ branch_reset_with_name_test_a()->
     teardown(branch),
     setup(branch),
     {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
-    ?assertThrow( emercurial_client:branch(Pid,#branch{name='foo',clean=true}).
-    %% ?assertMatch(Result,'foo'),
-    %% append("a","a"),
-    %% {Rev,Node} =emercurial_client:commit(Pid,#commit{message='first',add_remove=true}),
-    %% Log = #log{},
-    %% Result_a = emercurial_client:log(Pid,Log),
-    %% error_logger:info_report([client_basic_test_a_1,Result_a]),
-    %% First = lists:nth(1,Result_a),
-    %% B_a = love_misc:get_value(branch,First),
-    %% ?assertMatch(B_a, 'foo').    
+    Throw = #mercurial_value_error{value="cannot use both name and clean"},
+    ?assertThrow(Throw,
+                 emercurial_client:branch(Pid,#branch{name='foo',clean=true})),
+    teardown(branch).    
+
+branch_reset_test_a()-> 
+    teardown(branch),
+    setup(branch),
+    {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
+    Result = emercurial_client:branch(Pid,#branch{name='foo'}),
+    ?assertMatch('foo',Result),
+    error_logger:info_report([client_tests_reset_test_1,Result]),
+    Result_a = emercurial_client:branch(Pid,#branch{clean=true}),
+    error_logger:info_report([client_tests_reset_test_2,Result_a]).
+    
+branch_exists_test_a()-> %%测试文件已经存在的情况
+    teardown(branch),
+    setup(branch),
+    {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
+    append("a","a"),
+    {_Rev,_Node} =emercurial_client:commit(Pid,#commit{
+                                                  message='first',
+                                                  add_remove=true}),
+    Result = emercurial_client:branch(Pid,#branch{name='foo'}),
+    error_logger:info_report([tests_branch_exists_1,Result]),
+    append("a","a"),
+    {_Rev_1,_Node_1} =emercurial_client:commit(Pid,#commit{
+                                                  message='second'
+                                                     }),
+    Result_a = emercurial_client:branch(Pid,#branch{}),
+    ?assertMatch('foo',Result_a),
+    teardown(branch).
+
+branch_force_test_a()->
+    teardown(branch),
+    setup(branch),
+    {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
+    append("a","a"),
+    {_Rev,_Node} =emercurial_client:commit(Pid,#commit{
+                                                  message='first',
+                                                  add_remove=true}),
+    Result = emercurial_client:branch(Pid,#branch{name='foo'}),
+    error_logger:info_report([client_force_test_1,Result]),
+    append("a","a"),
+    {_Rev,_Node} =emercurial_client:commit(Pid,#commit{
+                                                  message='second'
+                                                 }),    
+    Result_a = emercurial_client:branch(Pid,#branch{name=default}),
+    error_logger:info_report([client_force_test_2,Result_a]).
+
