@@ -79,7 +79,13 @@ branch(_Pid,#branch{name=Name,clean=true}) when Name =/= none ->
             "cannot use both name and clean"));
 
 branch(Pid,Branch)->
-    gen_server:call(Pid,{branch,Branch}).
+    Reply = gen_server:call(Pid,{branch,Branch}),
+    case Reply of
+        {throw,Reason} ->
+            throw (Reason);
+        Other ->
+            Other
+    end.
 
 cat(Pid,Cat)->
     gen_server:call(Pid,{cat,Cat}).
@@ -167,8 +173,17 @@ init([Dest,Encoding,Configs,Connect]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call(Request, From, State) ->
+    error_logger:info_report([handle_call,Request]),
+    try
+        handle_call0(Request,From,State)
+    catch throw:Reason->
+            {reply,{throw,Reason},State};
+          Type:Reason_a->
+            error_logger:info_report([client_call_1,Type,Reason_a])             
+    end.
 
-handle_call({add,Add},_From,State)->
+handle_call0({add,Add},_From,State)->
     Internal_add = convert(Add),
     Kwargs = get_excluded_list(Internal_add,[files]),
     Files = Add#add.files,
@@ -181,7 +196,7 @@ handle_call({add,Add},_From,State)->
     Result = emercurial_reterrorhandler:nonzero(),
     {reply,Result,State};         
 
-handle_call({branch,Branch},_From,State)->
+handle_call0({branch,Branch},_From,State)->
     Internal_branch = convert(Branch),
     Kwargs = get_excluded_list(Internal_branch,[name]),
     Name = Branch#branch.name,
@@ -205,7 +220,7 @@ handle_call({branch,Branch},_From,State)->
              end,
     {reply,Result,State};
 
-handle_call({cat,Cat},_From,State)->
+handle_call0({cat,Cat},_From,State)->
     Internal_cat = convert(Cat),
     Kwargs = get_excluded_list(Internal_cat,[files]),
     Files = Cat#cat.files,
@@ -221,7 +236,7 @@ handle_call({cat,Cat},_From,State)->
     end,
     {reply,Out,State};
 
-handle_call({clone,Clone},_From,State)->
+handle_call0({clone,Clone},_From,State)->
     Internal_clone = convert(Clone),
     Kwargs = get_excluded_list(Internal_clone,[source,dest]),
     Source = Clone#clone.source,
@@ -234,7 +249,7 @@ handle_call({clone,Clone},_From,State)->
     {reply,Out,State};
 
 
-handle_call({commit,Commit},_From,State)->
+handle_call0({commit,Commit},_From,State)->
     Internal_commit = convert(Commit),
     Kwargs = get_excluded_list(Internal_commit,[]),
     Args = emercurial_misc:run_command_cmdbuilder('commit',[],Kwargs),
@@ -250,7 +265,7 @@ handle_call({commit,Commit},_From,State)->
     error_logger:info_report([client_call_commit_2,Out]),
     {reply,process_out(Out),State};
 
-handle_call({diff,Diff},_From,State)->
+handle_call0({diff,Diff},_From,State)->
     Internal_diff = convert(Diff),
     Kwargs = get_excluded_list(Internal_diff,[files]),
     Files = Diff#diff.files,
@@ -260,7 +275,7 @@ handle_call({diff,Diff},_From,State)->
     Out = raw_command(State,Raw_command),
     {reply,Out,State};
 
-handle_call({log,Log},_From,State)->
+handle_call0({log,Log},_From,State)->
     Internal_log = convert(Log),
     Kwargs = get_excluded_list(Internal_log,[]),
     Args = emercurial_misc:run_command_cmdbuilder('log',[],Kwargs),
@@ -275,7 +290,7 @@ handle_call({log,Log},_From,State)->
     Revision = emercurial_misc:generate_log_revision(List_b_a),
     {reply,Revision,State};
 
-handle_call({parents,Parents},_From,State)->
+handle_call0({parents,Parents},_From,State)->
     Internal_parents = convert(Parents),
     Kwargs = get_excluded_list(Internal_parents,[file]),
     File = Parents#parents.file,
@@ -287,7 +302,7 @@ handle_call({parents,Parents},_From,State)->
     Revision = emercurial_misc:generate_revision(List_b_a),
     {reply,Revision,State};
 
-handle_call({push,Push},_From,State)->
+handle_call0({push,Push},_From,State)->
     Internal_push = convert(Push),
     Kwargs = get_excluded_list(Internal_push,[dest]),
     Dest = Push#push.dest,
@@ -299,7 +314,7 @@ handle_call({push,Push},_From,State)->
     Revision = emercurial_misc:generate_revision(List_b_a),
     {reply,Revision,State};    
 
-handle_call({tag,Tag=#tag{names=Names}},_From,State)->
+handle_call0({tag,Tag=#tag{names=Names}},_From,State)->
     case is_list(Names) of
         true ->
             New_names = Names;
@@ -313,7 +328,7 @@ handle_call({tag,Tag=#tag{names=Names}},_From,State)->
     <<>> = raw_command(State,#raw_command{args=New_args}),
     {reply,ok,State};
 
-handle_call({tags},_From,State)->
+handle_call0({tags},_From,State)->
     %% Internal_tag = convert(Tag),
     %% Kwargs = get_excluded_list(Internal_tag,[names]),    
     Internal_tags = #internal_tags{v = true},
@@ -325,7 +340,7 @@ handle_call({tags},_From,State)->
     {reply,Result,State};
 
 
-handle_call({update,Update},_From,State)->
+handle_call0({update,Update},_From,State)->
     Internal_update = convert(Update),
     if
         Update#update.clean andalso Update#update.check ->
@@ -354,13 +369,7 @@ handle_call({update,Update},_From,State)->
                                N
                        end, List_a),
     Tuple = list_to_tuple(List_b),
-    {reply,Tuple,State};
-
-handle_call(Request, _From, State) ->
-    error_logger:info_report([handle_call,Request]),
-    Reply = ok,
-    {reply, Reply, State}.
-
+    {reply,Tuple,State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -611,7 +620,7 @@ out_write(Data)->
     put(out_data,New_data).
 
 raw_command(State,#raw_command{args=Args,prompt=Prompt,input=Input,error_handler=Error_handler})->
-    Out_channels=[{'r',fun error_write/1},{'o',fun out_write/1}],
+    Out_channels=[{'e',fun error_write/1},{'o',fun out_write/1}],
     clear_out(),
     clear_error(),
     case Prompt of
@@ -741,8 +750,9 @@ run_command_internal(Channel,Data,State=#state{port=Port},In_channels,Out_channe
 
 run_command_internal(Channel,Data,State,In_channels,Out_channels)
   when Channel=='o' orelse Channel=='e'->
-    %% error_logger:info_report([run_command_internal_o_e,Data]),
+    error_logger:info_report([run_command_internal_o_e_1,Data,Channel,Out_channels]),
     Fun = proplists:get_value(Channel,Out_channels),
+    error_logger:info_report([run_command_internal_o_e_2,Fun]),
     Fun(Data),
     run_command_internal(State,In_channels,Out_channels);
 

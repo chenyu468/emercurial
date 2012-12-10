@@ -95,7 +95,7 @@ branch_force_test_a()->
     Result = emercurial_client:branch(Pid,#branch{name='foo'}),
     error_logger:info_report([client_force_test_1,Result]),
     append("a","a"),
-    {_Rev,_Node} =emercurial_client:commit(Pid,#commit{
+    {_Rev_a,_Node_a} =emercurial_client:commit(Pid,#commit{
                                                   message='second'
                                                  }),    
     Result_a = emercurial_client:branch(Pid,#branch{name=default}),
