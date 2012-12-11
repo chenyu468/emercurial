@@ -1,13 +1,43 @@
 -module(client_tests).
 
--export([tag_a_test_a/0,branch_empty_test_a/0,branch_basic_test_a/0,
+-export([clone_test_a/0,tag_a_test_a/0,branch_empty_test_a/0,
+         branch_basic_test_a/0,
          branch_reset_with_name_test_a/0,branch_reset_test_a/0,
-        branch_exists_test_a/0,branch_force_test_a/0]).
+        branch_exists_test_a/0,branch_force_test_a/0,
+         push_test_a/0,test_all/0]).
 -import(emercurial_common_tests,[setup/1,teardown/1,append/2]).
 
 -include("emercurial.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+test_all()->
+    clone_test_a(),
+    tag_a_test_a(),
+    branch_empty_test_a(),
+    branch_basic_test_a(),
+    branch_reset_with_name_test_a(),
+    branch_reset_test_a(),
+    branch_exists_test_a(),
+    branch_force_test_a().
+
+%%=============================
+%% clone test 
+%%=============================
+clone_test_a()->
+    teardown(clone),    
+    setup(clone),
+    append("a","a"),
+    {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
+    _Result_a =emercurial_client:commit(Pid,#commit{message='first',add_remove=true}),
+    Result_b = emercurial_client:clone(#clone{source='.',dest='cloned'}),
+    {ok,Pid_clone} = Result_b,
+    Log_a = emercurial_client:log(Pid,#log{}),
+    Log_b = emercurial_client:log(Pid_clone,#log{}),
+    ?assertMatch(Log_a,Log_b).
+
+%%=============================
+%% tag test
+%%=============================
 tag_a_test_a()->
     teardown(tag),    
     setup(tag),
@@ -24,6 +54,9 @@ tag_a_test_a()->
     error_logger:info_report([tab_a_result_a,Tags]),
     teardown(tag).
 
+%%=============================
+%% branch test
+%%=============================
 branch_empty_test_a()->
     teardown(branch),
     setup(branch),
@@ -90,14 +123,42 @@ branch_force_test_a()->
     {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
     append("a","a"),
     {_Rev,_Node} =emercurial_client:commit(Pid,#commit{
-                                                  message='first',
-                                                  add_remove=true}),
+                                             message='first',
+                                             add_remove=true}),
     Result = emercurial_client:branch(Pid,#branch{name='foo'}),
     error_logger:info_report([client_force_test_1,Result]),
     append("a","a"),
     {_Rev_a,_Node_a} =emercurial_client:commit(Pid,#commit{
-                                                  message='second'
-                                                 }),    
-    Result_a = emercurial_client:branch(Pid,#branch{name=default}),
-    error_logger:info_report([client_force_test_2,Result_a]).
+                                                 message='second'
+                                                }),    
+    Error = {mercurial_command_error,
+             [branch,default],
+             4294967295,<<>>,"(use 'hg update' to switch to it)"},
+    ?assertThrow(Error, 
+                 emercurial_client:branch(Pid,#branch{name=default})),
+    Result_a = emercurial_client:branch(Pid,#branch{name=default,force=true}),    
+    ?assertMatch(default,Result_a).
 
+%%=====================
+%% push
+%%=====================
+push_test_a()->
+    teardown(push),
+    setup(push),
+    {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
+    append("a","a"),
+    {_Rev,_Node} =emercurial_client:commit(Pid,#commit{
+                                             message='first_a',
+                                             add_remove=true}),
+    Result_b = emercurial_client:clone(#clone{source='.',dest='other'}),
+    error_logger:info_report([client_tests_push_test_1,Result_b]),
+    {ok,Pid_a} = emercurial_client:open('other'),
+    error_logger:info_report([client_tests_push_test_2,Pid_a]),    
+    append("b","b"),
+    {_Rev_a,_Node_a} =emercurial_client:commit(Pid,#commit{
+                                                 message='second_a',
+                                                 add_remove=true
+                                                }),    
+    Result_c = emercurial_client:push(Pid,#push{dest='other'}),
+    %%error_logger:info_report([client_tests_push_test_3,Result_c]).
+    ?assertMatch(true,Result_c).

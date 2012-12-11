@@ -20,7 +20,7 @@
          terminate/2, code_change/3]).
 
 -export([add/2,branch/2,cat/2,clone/1,clone/2,commit/2,diff/2,init_hg/1,log/2,
-         open/3,update/2,parents/2,push/2,tag/2,tags/1]).
+         open/1,open/3,update/2,parents/2,push/2,tag/2,tags/1]).
 
 -include("emercurial.hrl").
 
@@ -53,6 +53,10 @@ clone(Clone)->
     {ok,Encoding} = application:get_env(emercurial,encoding),
     emercurial_client:start_link(Clone#clone.dest,Encoding,Clone#clone.configs,false).
 
+open(Path)->
+    {ok,Encoding} = application:get_env(emercurial,encoding),
+    open(Path,Encoding,none).
+
 open(Path,Encoding,Configs)->
     emercurial_client:start_link(Path,Encoding,Configs,false).
 
@@ -71,6 +75,8 @@ init_hg(Clone)->
     end,
     emercurial_client:start_link(Clone#clone.dest,Clone#clone.encoding,Clone#clone.configs,false). 
 
+
+
 add(Pid,Add)->
     gen_server:call(Pid,{add,Add}).
 
@@ -80,10 +86,13 @@ branch(_Pid,#branch{name=Name,clean=true}) when Name =/= none ->
 
 branch(Pid,Branch)->
     Reply = gen_server:call(Pid,{branch,Branch}),
+    %% error_logger:info_report([client_branch_1,Reply]),
     case Reply of
         {throw,Reason} ->
+            %% error_logger:info_report([client_branch_2,Reply,Reason]),
             throw (Reason);
         Other ->
+            %% error_logger:info_report([client_branch_3,Other]),
             Other
     end.
 
@@ -180,7 +189,7 @@ handle_call(Request, From, State) ->
     catch throw:Reason->
             {reply,{throw,Reason},State};
           Type:Reason_a->
-            error_logger:info_report([client_call_1,Type,Reason_a])             
+            error_logger:info_report([client_call_t_1,Type,Reason_a,erlang:get_stacktrace()])             
     end.
 
 handle_call0({add,Add},_From,State)->
@@ -307,12 +316,18 @@ handle_call0({push,Push},_From,State)->
     Kwargs = get_excluded_list(Internal_push,[dest]),
     Dest = Push#push.dest,
     Args = emercurial_misc:run_command_cmdbuilder('push',[Dest],Kwargs),
-    Raw_command = #raw_command{args = Args},
+    ok = emercurial_reterrorhandler:init(Args,none),
+    Eh = fun emercurial_reterrorhandler:handle/3,
+    %% Raw_command = #raw_command{args = New_args,error_handler=Eh},
+    %% _Out = raw_command(State,Raw_command),
+    %% Result = emercurial_reterrorhandler:nonzero(),
+    Raw_command = #raw_command{args = Args,error_handler=Eh},
     Out = raw_command(State,Raw_command),
-    List_b = binary:split(Out,<<$\0>>,[global]),
-    List_b_a = lists:sublist(List_b,1,length(List_b)-1),
-    Revision = emercurial_misc:generate_revision(List_b_a),
-    {reply,Revision,State};    
+    error_logger:info_report([client_call0_push_1,Out]),
+    %% A = love_misc:to_boolean(love_misc:trim( love_misc:to_list(Out))),
+    Result = emercurial_reterrorhandler:nonzero(),
+    error_logger:info_report([client_call0_push_1,Result]),
+    {reply,Result,State};    
 
 handle_call0({tag,Tag=#tag{names=Names}},_From,State)->
     case is_list(Names) of
@@ -567,7 +582,7 @@ convert(Push=#push{}) ->
        }.
 
 error_write(Data) ->
-    put(error_data,Data).
+    put(error_data,love_misc:trim(love_misc:to_list(Data))).
 
 get_excluded_list(Record,Excluded_list)->
     emercurial_misc:get_excluded_list(Record,Excluded_list).
@@ -646,7 +661,8 @@ raw_command(State,#raw_command{args=Args,prompt=Prompt,input=Input,error_handler
             Return->
                 case Error_handler of
                     none ->
-                        exit(emercurial_misc:generate_mercurial_error(Args,
+                        %% exit(emercurial_misc:generate_mercurial_error(Args,
+                        throw(emercurial_misc:generate_mercurial_error(Args,
                                                                       Return,
                                                                       get_out(),
                                                                       get_error()));
@@ -655,17 +671,19 @@ raw_command(State,#raw_command{args=Args,prompt=Prompt,input=Input,error_handler
                 end
         end
     catch 
-        Error:Reason->
-            case Error_handler of
-                none ->
-                    error_logger:info_report([client_raw_command_1,Error,Reason]),
-                    emercurial_misc:generate_mercurial_error(
-                      Args,"",get_out(),atom_to_list(Error) 
-                      ++ love_misc:to_binary(term_to_binary(Reason))),
-                    error_logger:info_report([erlang:get_stacktrace()]);
-                _->
-                    Error_handler("",get_out(),Reason)
-            end
+        throw:Reason->
+            throw (Reason)
+        %% Error:Reason->
+        %%     case Error_handler of
+        %%         none ->
+        %%             error_logger:info_report([client_raw_command_1,Error,Reason]),
+        %%             throw (emercurial_misc:generate_mercurial_error(
+        %%               Args,"",get_out(),atom_to_list(Error) 
+        %%               ++ love_misc:to_binary(term_to_binary(Reason)))),
+        %%             error_logger:info_report([erlang:get_stacktrace()]);
+        %%         _->
+        %%             Error_handler("",get_out(),Reason)
+        %%     end
     end. 
 
 
@@ -752,7 +770,7 @@ run_command_internal(Channel,Data,State,In_channels,Out_channels)
   when Channel=='o' orelse Channel=='e'->
     error_logger:info_report([run_command_internal_o_e_1,Data,Channel,Out_channels]),
     Fun = proplists:get_value(Channel,Out_channels),
-    error_logger:info_report([run_command_internal_o_e_2,Fun]),
+    %% error_logger:info_report([run_command_internal_o_e_2,Fun]),
     Fun(Data),
     run_command_internal(State,In_channels,Out_channels);
 
