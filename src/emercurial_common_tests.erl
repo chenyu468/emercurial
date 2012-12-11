@@ -26,7 +26,7 @@ append(Name,Content)->
     %%ok = file:set_cwd(Path),
     %%{ok, Io_device}=file:open(Name,write),
     %%file:pwrite(
-    file:write_file(Name,list_to_binary(Content)).
+    file:write_file(Name,list_to_binary(Content),[write,append]).
 
 nuke_dir(Dir) ->
     FoldFun = fun(File) ->

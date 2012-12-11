@@ -155,10 +155,10 @@ push_test_a()->
     error_logger:info_report([client_tests_push_test_1,Result_b]),
     {ok,Pid_a} = emercurial_client:open('other'),
     error_logger:info_report([client_tests_push_test_2,Pid_a]),    
-    append("b","b"),
+    append("a","a"),
     {_Rev_a,_Node_a} =emercurial_client:commit(Pid,#commit{
-                                                 message='second_a',
-                                                 add_remove=true
+                                                 message='second_a'%%,
+                                                %% add_remove=true
                                                 }),    
     Result_c = emercurial_client:push(Pid,#push{dest='other'}),
     %%error_logger:info_report([client_tests_push_test_3,Result_c]).
