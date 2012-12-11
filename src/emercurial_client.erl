@@ -262,16 +262,8 @@ handle_call0({commit,Commit},_From,State)->
     Internal_commit = convert(Commit),
     Kwargs = get_excluded_list(Internal_commit,[]),
     Args = emercurial_misc:run_command_cmdbuilder('commit',[],Kwargs),
-    error_logger:info_report([client_call_commit_1,Args]),
     Out = raw_command(State,#raw_command{args=Args}),
-    error_logger:info_report([client_handle_call_commit_2,Out]),
-    %% List_b = binary:split(Out,<<" ">>,[global]),
-    %% Last = lists:last(List_b),
-    %% [Rev,Node] = binary:split(Last,<<":">>),
-    %% Rev_a = list_to_atom(binary_to_list(Rev)),
-    %% Node_a = list_to_atom(lists:sublist(binary_to_list(Node),1,size(Node)-1)),
-    %% process_out(Out),
-    error_logger:info_report([client_call_commit_2,Out]),
+    %% error_logger:info_report([client_call_commit_2,Out]),
     {reply,process_out(Out),State};
 
 handle_call0({diff,Diff},_From,State)->
@@ -293,9 +285,9 @@ handle_call0({log,Log},_From,State)->
     Raw_command = #raw_command{args = New_args},
     Out = raw_command(State,Raw_command),
     List_b = binary:split(Out,<<$\0>>,[global,trim]),
-    error_logger:info_report([client_call_log_3,List_b]),
+    %% error_logger:info_report([client_call_log_3,List_b]),
     List_b_a = lists:sublist(List_b,1,length(List_b)),
-    error_logger:info_report([client_call_log_4,List_b_a]),
+    %% error_logger:info_report([client_call_log_4,List_b_a]),
     Revision = emercurial_misc:generate_log_revision(List_b_a),
     {reply,Revision,State};
 
@@ -322,11 +314,11 @@ handle_call0({push,Push},_From,State)->
     %% _Out = raw_command(State,Raw_command),
     %% Result = emercurial_reterrorhandler:nonzero(),
     Raw_command = #raw_command{args = Args,error_handler=Eh},
-    Out = raw_command(State,Raw_command),
-    error_logger:info_report([client_call0_push_1,Out]),
+    _Out = raw_command(State,Raw_command),
+    %% error_logger:info_report([client_call0_push_1,Out]),
     %% A = love_misc:to_boolean(love_misc:trim( love_misc:to_list(Out))),
     Result = emercurial_reterrorhandler:nonzero(),
-    error_logger:info_report([client_call0_push_1,Result]),
+    %% error_logger:info_report([client_call0_push_1,Result]),
     {reply,Result,State};    
 
 handle_call0({tag,Tag=#tag{names=Names}},_From,State)->
@@ -615,11 +607,8 @@ gen_error(Args,Return,Out,Error)->
 
 
 process_out(Out)->
-    error_logger:info_report([client_process_out_1,Out]),
     List_b = binary:split(Out,<<" ">>,[global,trim]),
-    error_logger:info_report([client_process_out_2,List_b]),
     Last = lists:last(List_b),
-    error_logger:info_report([client_process_out_3,Last]),
     [Rev,Node] = binary:split(Last,<<":">>),
     Rev_a = list_to_atom(binary_to_list(Rev)),
     Node_a = list_to_atom(lists:sublist(binary_to_list(Node),1,size(Node)-1)),
@@ -768,7 +757,7 @@ run_command_internal(Channel,Data,State=#state{port=Port},In_channels,Out_channe
 
 run_command_internal(Channel,Data,State,In_channels,Out_channels)
   when Channel=='o' orelse Channel=='e'->
-    error_logger:info_report([run_command_internal_o_e_1,Data,Channel,Out_channels]),
+    %% error_logger:info_report([run_command_internal_o_e_1,Data,Channel,Out_channels]),
     Fun = proplists:get_value(Channel,Out_channels),
     %% error_logger:info_report([run_command_internal_o_e_2,Fun]),
     Fun(Data),

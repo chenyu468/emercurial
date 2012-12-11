@@ -18,7 +18,8 @@ test_all()->
     branch_reset_with_name_test_a(),
     branch_reset_test_a(),
     branch_exists_test_a(),
-    branch_force_test_a().
+    branch_force_test_a(),
+    push_test_a().
 
 %%=============================
 %% clone test 
