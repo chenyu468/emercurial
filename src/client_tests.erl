@@ -161,5 +161,8 @@ push_test_a()->
                                                 %% add_remove=true
                                                 }),    
     Result_c = emercurial_client:push(Pid,#push{dest='other'}),
-    %%error_logger:info_report([client_tests_push_test_3,Result_c]).
+    Log = emercurial_client:log(Pid,#log{}),
+    error_logger:info_report([client_tests_push_test_4,Log]),
+    Log_b = emercurial_client:log(Pid_a,#log{}),
+    ?assertMatch(Log,Log_b),
     ?assertMatch(true,Result_c).
