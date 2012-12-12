@@ -200,7 +200,9 @@ handle_call0({add,Add},_From,State)->
     New_args = Args ++ Files,
     ok = emercurial_reterrorhandler:init(Args,none),
     Eh = fun emercurial_reterrorhandler:handle/3,
+    error_logger:info_report([client_call0_add_1,New_args]),
     Raw_command = #raw_command{args = New_args,error_handler=Eh},
+    error_logger:info_report([client_call0_add_2,Raw_command]),
     _Out = raw_command(State,Raw_command),
     Result = emercurial_reterrorhandler:nonzero(),
     {reply,Result,State};         
@@ -274,7 +276,7 @@ handle_call0({diff,Diff},_From,State)->
     New_args = Args ++ Files,
     Raw_command = #raw_command{args = New_args},
     Out = raw_command(State,Raw_command),
-    {reply,Out,State};
+    {reply,love_misc:to_list(Out),State};
 
 handle_call0({log,Log},_From,State)->
     Internal_log = convert(Log),
@@ -459,6 +461,26 @@ cmdbuilder(Name,Args_list,Kwarg_list)->
 %%                      f = Branch#branch.force,
 %%                      'C' = Branch#branch.clean};
 
+convert(Diff=#diff{})->
+    #internal_diff{
+       r = Diff#diff.revs,
+       c = Diff#diff.change,
+       a = Diff#diff.text,
+       g = Diff#diff.git,
+       nodates = Diff#diff.nodates,
+       p = Diff#diff.showfunction,
+       reverse = Diff#diff.reverse,
+       w = Diff#diff.ignoreallspace,
+       b = Diff#diff.ignorespacechange,
+       'B' = Diff#diff.ignoreblanklines,
+       'U' = Diff#diff.unified,
+       stat = Diff#diff.stat,
+       'S' = Diff#diff.subrepos,
+       'I' = Diff#diff.include,
+       'X' = Diff#diff.exclude,
+       files = files
+       };
+
 convert(Log=#log{})->
     #internal_log{template = ?TEMPLATE_CHANGESET,
                   r=Log#log.revrange,
@@ -514,24 +536,24 @@ convert(Clone=#clone{}) ->
          r = Clone#clone.rev
         };
 
-convert(Diff=#diff{}) ->
-    #internal_diff{
-         r = Diff#diff.revs,
-         c = Diff#diff.change,
-         a = Diff#diff.text,
-         g = Diff#diff.git,
-         nodates = Diff#diff.nodates,
-         p = Diff#diff.showfunction,
-         reverse = Diff#diff.reverse,
-         w = Diff#diff.ignoreallspace,
-         b = Diff#diff.ignorespacechange,
-         'B' = Diff#diff.ignoreblanklines,
-         'U' = Diff#diff.unified,
-         stat = Diff#diff.stat,
-         'S' = Diff#diff.subrepos,
-         'I' = Diff#diff.include,
-         'X' = Diff#diff.exclude
-        };
+%% convert(Diff=#diff{}) ->
+%%     #internal_diff{
+%%          r = Diff#diff.revs,
+%%          c = Diff#diff.change,
+%%          a = Diff#diff.text,
+%%          g = Diff#diff.git,
+%%          nodates = Diff#diff.nodates,
+%%          p = Diff#diff.showfunction,
+%%          reverse = Diff#diff.reverse,
+%%          w = Diff#diff.ignoreallspace,
+%%          b = Diff#diff.ignorespacechange,
+%%          'B' = Diff#diff.ignoreblanklines,
+%%          'U' = Diff#diff.unified,
+%%          stat = Diff#diff.stat,
+%%          'S' = Diff#diff.subrepos,
+%%          'I' = Diff#diff.include,
+%%          'X' = Diff#diff.exclude
+%%         };
 
 convert(Add=#add{}) ->
     #internal_add{

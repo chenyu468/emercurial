@@ -57,8 +57,6 @@
              include=none,
              exclude=none}).
 
-
-
 -record(branch,{name = none,
                 clean = false,
                 force = false}).
@@ -73,6 +71,42 @@
                 user = none,
                 include = none,
                 exclude = none}).
+
+-record(diff,{files=[],
+              revs=[],
+              change=none,
+              text=false,
+              git=false,
+              nodates=false,
+              showfunction=false,
+              reverse=false,
+              ignoreallspace=false,
+              ignorespacechange=false,
+              ignoreblanklines=false,
+              unified=none,
+              stat=false,
+              subrepos=false,
+              include=none,
+              exclude=none
+              }).
+
+-record(internal_diff,{r,
+                       c,
+                       a,
+                       g,
+                       nodates,
+                       p,
+                       reverse,
+                       w,
+                       b,
+                       'B',
+                       'U',
+                       stat,
+                       'S',
+                       'I',
+                       'X',
+                       files
+                       }).
 
 -record(internal_commit,{debug = true,
                          m, % message
@@ -112,23 +146,23 @@
                       o
                       }).
 
--record(diff,{files=[],
-              revs = [],
-              change = none,
-              text = false,
-              git = false,
-              nodates = false,
-              showfunction = false,
-              reverse = false,
-              ignoreallspace = false,
-              ignorespacechange = false,
-              ignoreblanklines = false,
-              unified = none,
-              stat = false,
-              subrepos = false,
-              include = none,
-              exclude = none
-              }).
+%% -record(diff,{files=[],
+%%               revs = [],
+%%               change = none,
+%%               text = false,
+%%               git = false,
+%%               nodates = false,
+%%               showfunction = false,
+%%               reverse = false,
+%%               ignoreallspace = false,
+%%               ignorespacechange = false,
+%%               ignoreblanklines = false,
+%%               unified = none,
+%%               stat = false,
+%%               subrepos = false,
+%%               include = none,
+%%               exclude = none
+%%               }).
 
 
 -record(add,{files = [],
@@ -203,22 +237,22 @@
                        insecure
                        }).
 
--record(internal_diff,{r, %% revs
-                       c, %% change
-                       a, %% text
-                       g, %% git
-                       nodates, %% nodates
-                       p, %% showfunction
-                       reverse, %% reverse
-                       w, %% ignoreallspace
-                       b, %% ignorespacechange
-                       'B', %% ignoreblanklines
-                       'U', %% unified
-                       stat, %% stat
-                       'S', %% subrepos
-                       'I', %% include
-                       'X' %% exclude
-                       }).
+%% -record(internal_diff,{r, %% revs
+%%                        c, %% change
+%%                        a, %% text
+%%                        g, %% git
+%%                        nodates, %% nodates
+%%                        p, %% showfunction
+%%                        reverse, %% reverse
+%%                        w, %% ignoreallspace
+%%                        b, %% ignorespacechange
+%%                        'B', %% ignoreblanklines
+%%                        'U', %% unified
+%%                        stat, %% stat
+%%                        'S', %% subrepos
+%%                        'I', %% include
+%%                        'X' %% exclude
+%%                        }).
 
 -record(internal_tags,{v
                        }).

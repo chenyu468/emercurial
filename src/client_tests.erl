@@ -3,7 +3,8 @@
 -export([clone_test_a/0,tag_a_test_a/0,branch_empty_test_a/0,
          branch_basic_test_a/0,
          branch_reset_with_name_test_a/0,branch_reset_test_a/0,
-        branch_exists_test_a/0,branch_force_test_a/0,
+         branch_exists_test_a/0,branch_force_test_a/0,
+         diff_test_a/0,
          push_test_a/0,test_all/0]).
 -import(emercurial_common_tests,[setup/1,teardown/1,append/2]).
 
@@ -166,3 +167,55 @@ push_test_a()->
     Log_b = emercurial_client:log(Pid_a,#log{}),
     ?assertMatch(Log,Log_b),
     ?assertMatch(true,Result_c).
+
+%%=======================
+%% diff
+%%=======================
+diff_test_a()->
+    teardown(push),
+    setup(push),
+    {ok,Pid} = emercurial_client:start_link('none','UTF-8','none',true),
+    append("a","a\n"),
+    true = emercurial_client:add(Pid,#add{files=['a']}),
+    Diff1 = 
+        "diff -r 000000000000 a\n--- /dev/null\n+++ b/a\n@@ -0,0 +1,1 @@\n+a\n",
+    ?assertMatch(Diff1,emercurial_client:diff(Pid,#diff{nodates=true})),
+    ?assertMatch(Diff1,emercurial_client:diff(Pid,
+                                              #diff{nodates=true,
+                                                    files=['a']})),
+    {Rev0,Node0} = emercurial_client:commit(Pid,#commit{message='first'}),
+    Diff2_a =
+        "diff -r 000000000000 -r ~s a\n--- /dev/null\n+++ b/a\n@@ -0,0 +1,1 @@\n+a\n",
+    Diff2 = get_diff_data(Diff2_a,[Node0]),
+    Result = emercurial_client:diff(Pid,#diff{change=Rev0,nodates=true}),
+    ?assertMatch(Diff2,Result),    
+    append("a","a\n"),
+    {Rev1,Node1} = emercurial_client:commit(Pid,#commit{message='second'}),
+    Diff3_a =  "diff -r ~s a\n--- a/a\n+++ b/a\n@@ -1,1 +1,2 @@\n a\n+a\n", %% "~s",
+    Diff3 = get_diff_data(Diff3_a,[Node0]),
+    Result_a = emercurial_client:diff(Pid,#diff{revs=[Rev0],nodates=true}),
+    ?assertMatch(Diff3,Result_a),
+    error_logger:info_report([client_diff_tests_1,Diff3,Result_a]),
+    Diff4_a = "diff -r ~s -r ~s a\n--- a/a\n+++ b/a\n@@ -1,1 +1,2 @@\n a\n+a\n",
+    Diff4 = get_diff_data(Diff4_a,[Node0,Node1]),
+    Result_b = emercurial_client:diff(Pid,#diff{revs=[Rev0,Rev1],nodates=true}),
+    error_logger:info_report([client_diff_tests_2,Diff4,Result_b]),
+    ?assertMatch(Diff4,Result_b).
+
+get_diff_data(Diff,Node_list)->
+    List = [
+     string:substr(love_misc:to_list(Node),1,12)
+     ||
+        Node <- Node_list],
+    %% Node_a = string:substr(love_misc:to_list(Node),1,12),
+    Diff2 = lists:flatten(io_lib:format(Diff,List)),
+    Diff2.
+    
+    
+    
+                                    
+    
+
+
+    
+
