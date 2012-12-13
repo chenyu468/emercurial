@@ -20,7 +20,8 @@ test_all()->
     branch_reset_test_a(),
     branch_exists_test_a(),
     branch_force_test_a(),
-    push_test_a().
+    push_test_a(),
+    diff_test_a().
 
 %%=============================
 %% clone test 
@@ -178,20 +179,23 @@ diff_test_a()->
     append("a","a\n"),
     true = emercurial_client:add(Pid,#add{files=['a']}),
     Diff1 = 
-        "diff -r 000000000000 a\n--- /dev/null\n+++ b/a\n@@ -0,0 +1,1 @@\n+a\n",
+        "diff -r 000000000000 a\n"
+        "--- /dev/null\n+++ b/a\n@@ -0,0 +1,1 @@\n+a\n",
     ?assertMatch(Diff1,emercurial_client:diff(Pid,#diff{nodates=true})),
     ?assertMatch(Diff1,emercurial_client:diff(Pid,
                                               #diff{nodates=true,
                                                     files=['a']})),
     {Rev0,Node0} = emercurial_client:commit(Pid,#commit{message='first'}),
     Diff2_a =
-        "diff -r 000000000000 -r ~s a\n--- /dev/null\n+++ b/a\n@@ -0,0 +1,1 @@\n+a\n",
+        "diff -r 000000000000 -r ~s a\n"
+        "--- /dev/null\n+++ b/a\n@@ -0,0 +1,1 @@\n+a\n",
     Diff2 = get_diff_data(Diff2_a,[Node0]),
     Result = emercurial_client:diff(Pid,#diff{change=Rev0,nodates=true}),
     ?assertMatch(Diff2,Result),    
     append("a","a\n"),
     {Rev1,Node1} = emercurial_client:commit(Pid,#commit{message='second'}),
-    Diff3_a =  "diff -r ~s a\n--- a/a\n+++ b/a\n@@ -1,1 +1,2 @@\n a\n+a\n", %% "~s",
+    Diff3_a =  "diff -r ~s a\n--- a/a\n"
+        "+++ b/a\n@@ -1,1 +1,2 @@\n a\n+a\n", %% "~s",
     Diff3 = get_diff_data(Diff3_a,[Node0]),
     Result_a = emercurial_client:diff(Pid,#diff{revs=[Rev0],nodates=true}),
     ?assertMatch(Diff3,Result_a),
