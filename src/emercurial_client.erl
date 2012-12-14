@@ -157,8 +157,9 @@ init([Dest,Encoding,Configs,Connect]) ->
     Args_a = add_atom(Args,'-R',Dest),
     Args_b = add_atom(Args_a,'--config',Configs),                
     Command = emercurial_misc:list_to_command(Args_b),
+    error_logger:info_report([emercurial_client_init_1,Command]),
     Port_options =  [stream, binary, exit_status,stderr_to_stdout, hide],
-    error_logger:info_report([init,Command]),
+    %% error_logger:info_report([init,Command]),
     Port = open_port({spawn, Command}, Port_options),    
     application:set_env(emercurial,encoding,Encoding),
     State = #state{path=Dest,encoding=Encoding,configs=Configs,connect=Connect,args=Args_b,port=Port},
@@ -275,6 +276,7 @@ handle_call0({diff,Diff},_From,State)->
     Args = emercurial_misc:run_command_cmdbuilder('diff',[],Kwargs),
     New_args = Args ++ Files,
     Raw_command = #raw_command{args = New_args},
+    error_logger:info_report([emercurial_client_call0_diff_1,Raw_command]),
     Out = raw_command(State,Raw_command),
     {reply,love_misc:to_list(Out),State};
 
@@ -764,6 +766,7 @@ read_hello(State = #state{port=Port,encoding=Encoding})->
 run_command(State=#state{port=Port},Args, In_channels,Out_channels)->
     B = emercurial_misc:get_run_command_binary(Args),
     Data = <<"runcommand",$\n,B/binary>>,
+    error_logger:info_report([client_run_command_1,binary_to_list(Data)]),
     write_data(Port,Data),
     run_command_internal(State,In_channels,Out_channels).
 

@@ -142,11 +142,13 @@ generate_revision(List)->
     lists:zip(?REVISION,List_b).
 
 get_run_command_binary(Args)->
-    error_logger:info_report([get_run_command_binary,Args]),
+    %% error_logger:info_report([get_run_command_binary,Args]),
     List = lists:map(fun atom_to_list/1,Args),
     String = string:join(List,[$\0]),
     Size = length(String),
     Binary = list_to_binary(String),
+    error_logger:info_report([emercurial_misc_get_run_command_binary_1,
+                              string:join(List," ")]),
     <<Size:32/unsigned,Binary/binary>>.
 
 list_contain([],_)->
