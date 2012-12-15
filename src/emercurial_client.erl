@@ -329,7 +329,7 @@ handle_call0({push,Push},_From,State)->
     {reply,Result,State};    
 
 handle_call0({shutdown},_From,State)->
-    {stop,aaa,State};
+    {stop,normal,State};
 
 handle_call0({tag,Tag=#tag{names=Names}},_From,State)->
     case is_list(Names) of
