@@ -20,7 +20,7 @@
          terminate/2, code_change/3]).
 
 -export([add/2,branch/2,cat/2,clone/1,clone/2,commit/2,diff/2,init_hg/1,log/2,
-         open/1,open/3,update/2,parents/2,push/2,tag/2,tags/1]).
+         open/1,open/3,update/2,parents/2,push/2,tag/2,tags/1,shutdown/1]).
 
 -include("emercurial.hrl").
 
@@ -126,6 +126,9 @@ tags(Pid)->
 
 update(Pid,Update)->
     gen_server:call(Pid,{update,Update}).
+
+shutdown(Pid)->
+    gen_server:call(Pid,{shutdown}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -324,6 +327,9 @@ handle_call0({push,Push},_From,State)->
     Result = emercurial_reterrorhandler:nonzero(),
     %% error_logger:info_report([client_call0_push_1,Result]),
     {reply,Result,State};    
+
+handle_call0({shutdown},_From,State)->
+    {stop,aaa,State};
 
 handle_call0({tag,Tag=#tag{names=Names}},_From,State)->
     case is_list(Names) of
